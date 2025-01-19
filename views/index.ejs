@@ -3,29 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login / Register</title>
+  <title>AstroLinks - Welcome</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .progress-bar {
+      animation: progress-bar-shrink 5s linear forwards;
+      transform-origin: left;
+    }
+  
+    @keyframes progress-bar-shrink {
+      from {
+        transform: scaleX(1);
+      }
+      to {
+        transform: scaleX(0);
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 flex justify-center items-center h-screen">
-  <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
-    <h1 class="text-2xl font-bold mb-6 text-center">Login / Register</h1>
-    <form action="/auth" method="POST" class="space-y-4">
-      <input type="hidden" name="action" value="register" id="form-action">
+<body class="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex justify-center items-center p-4">
+  <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
+  <!-- Flash Messages -->
+  <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+    <div id="flash-success" class="fixed top-4 right-4 max-w-sm w-full bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 opacity-0">
+      <div class="px-4 py-3 relative">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-gray-800 font-medium">
+              <%= successMessage %>
+            </p>
+          </div>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-100">
+          <div class="progress-bar bg-green-500 h-full w-full"></div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+  
+  <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+    <div id="flash-error" class="fixed top-4 right-4 max-w-sm w-full bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 opacity-0">
+      <div class="px-4 py-3 relative">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-gray-800 font-medium">
+              <%= errorMessage %>
+            </p>
+          </div>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-100">
+          <div class="progress-bar bg-red-500 h-full w-full"></div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+  <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
+    <!-- Tabs -->
+    <div class="flex mb-8 border-b">
+      <button id="loginTab" class="flex-1 py-3 text-lg font-semibold text-center transition-colors duration-200 border-b-2 focus:outline-none">
+        <i class="fas fa-sign-in-alt mr-2"></i>Login
+      </button>
+      <button id="registerTab" class="flex-1 py-3 text-lg font-semibold text-center transition-colors duration-200 border-b-2 focus:outline-none">
+        <i class="fas fa-user-plus mr-2"></i>Register
+      </button>
+    </div>
+    <!-- Login Form -->
+    <form id="loginForm" action="/login" method="POST" class="space-y-4">
       <div>
-        <label for="name" class="block text-gray-700">Name</label>
-        <input type="text" id="name" name="name" class="w-full px-3 py-2 border rounded-md" placeholder="Your Name" required>
+        <label for="loginEmail" class="block text-gray-700 font-medium mb-1">Email</label>
+        <input type="email" id="loginEmail" name="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your email" required>
       </div>
       <div>
-        <label for="email" class="block text-gray-700">Email</label>
-        <input type="email" id="email" name="email" class="w-full px-3 py-2 border rounded-md" placeholder="Your Email" required>
+        <label for="loginPassword" class="block text-gray-700 font-medium mb-1">Password</label>
+        <input type="password" id="loginPassword" name="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your password" required>
+      </div>
+      <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200">
+        <i class="fas fa-sign-in-alt mr-2"></i>Login
+      </button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" action="/register" method="POST" class="space-y-4 hidden">
+      <div>
+        <label for="name" class="block text-gray-700 font-medium mb-1">Name</label>
+        <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your name" required>
       </div>
       <div>
-        <label for="password" class="block text-gray-700">Password</label>
-        <input type="password" id="password" name="password" class="w-full px-3 py-2 border rounded-md" placeholder="Password" required>
+        <label for="email" class="block text-gray-700 font-medium mb-1">Email</label>
+        <input type="email" id="email" name="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your email" required>
       </div>
       <div>
-        <label for="role" class="block text-gray-700">Role</label>
-        <select id="role" name="role" class="w-full px-3 py-2 border rounded-md" required>
+        <label for="password" class="block text-gray-700 font-medium mb-1">Password</label>
+        <input type="password" id="password" name="password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Create a password" required>
+      </div>
+      <div>
+        <label for="role" class="block text-gray-700 font-medium mb-1">Role</label>
+        <select id="role" name="role" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           <option value="enthusiast">Enthusiast</option>
           <option value="researcher">Researcher</option>
           <option value="scientist">Scientist</option>
@@ -33,32 +117,74 @@
       </div>
       <div id="additional-fields" class="hidden space-y-4">
         <div>
-          <label for="degree" class="block text-gray-700">Degree</label>
-          <input type="text" id="degree" name="degree" class="w-full px-3 py-2 border rounded-md" placeholder="Your Degree">
+          <label for="degree" class="block text-gray-700 font-medium mb-1">Degree</label>
+          <input type="text" id="degree" name="degree" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Your degree">
         </div>
         <div>
-          <label for="researchPaper" class="block text-gray-700">Research Paper</label>
-          <input type="text" id="researchPaper" name="researchPaper" class="w-full px-3 py-2 border rounded-md" placeholder="Research Paper Link">
+          <label for="researchPaper" class="block text-gray-700 font-medium mb-1">Research Paper</label>
+          <input type="text" id="researchPaper" name="researchPaper" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Research paper link">
         </div>
       </div>
-      <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">
-        Submit
+      <button type="submit" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors duration-200">
+        <i class="fas fa-user-plus mr-2"></i>Register
       </button>
     </form>
   </div>
   <script>
-    const roleSelect = document.getElementById("role");
-    const additionalFields = document.getElementById("additional-fields");
-    const formAction = document.getElementById("form-action");
-
-    roleSelect.addEventListener("change", (e) => {
-      const selectedRole = e.target.value;
-      if (selectedRole === "researcher" || selectedRole === "scientist") {
-        additionalFields.classList.remove("hidden");
-      } else {
-        additionalFields.classList.add("hidden");
+  document.addEventListener('DOMContentLoaded', function() {
+    const successFlash = document.getElementById('flash-success');
+    const errorFlash = document.getElementById('flash-error');
+  
+    const showFlashMessage = (element) => {
+      if (element) {
+        // Show the message with a fade in
+        setTimeout(() => {
+          element.style.opacity = '1';
+        }, 100);
+  
+        // Start fade out after 4.5 seconds
+        setTimeout(() => {
+          element.style.opacity = '0';
+        }, 4500);
+  
+        // Remove from DOM after fade out
+        setTimeout(() => {
+          element.remove();
+        }, 5000);
       }
+    };
+  
+    // Initialize progress bars animation
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(bar => {
+      bar.style.transition = 'width 5s linear';
+      setTimeout(() => {
+        bar.style.width = '0';
+      }, 100);
     });
-  </script>
+  
+    // Show messages if they exist
+    showFlashMessage(successFlash);
+    showFlashMessage(errorFlash);
+  
+    // Keep the tab switching logic
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+  
+    if (loginTab && registerTab) {
+      loginTab.addEventListener('click', () => {
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+      });
+  
+      registerTab.addEventListener('click', () => {
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      });
+    }
+  });
+</script>
 </body>
 </html>

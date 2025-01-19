@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 1.8em;
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-card h2 {
+            font-size: 1.4em;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        ul li {
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        ul li strong {
+            color: #000;
+        }
+
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .actions .btn {
+            background: #5dbb63;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .actions .btn:hover {
+            background: #489b4e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Welcome, <%= user.name %>!</h1>
+
+        <div class="profile-card">
+            <h2>Your Profile</h2>
+            <ul>
+                <li><strong>Name:</strong>
+                    <%= user.name %>
+                </li>
+                <li><strong>Email:</strong>
+                    <%= user.email %>
+                </li>
+                <li><strong>Role:</strong>
+                    <%= user.role %>
+                </li>
+                <% if (user.degree) { %>
+                    <li><strong>Degree:</strong>
+                        <%= user.degree %>
+                    </li>
+                    <% } %>
+                        <% if (user.researchPaper) { %>
+                            <li><strong>Research Paper:</strong> <a href="<%= user.researchPaper %>"
+                                    target="_blank">View Paper</a></li>
+                            <% } %>
+                                <li><strong>Account Approved:</strong>
+                                    <%= user.isApproved ? "Yes" : "No" %>
+                                </li>
+                                <li><strong>Account Created At:</strong>
+                                    <%= user.createdAt.toDateString() %>
+                                </li>
+            </ul>
+
+            <div class="actions">
+                <a href="/edit-profile" class="btn">Edit Profile</a>
+                <a href="/logout" class="btn">Logout</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

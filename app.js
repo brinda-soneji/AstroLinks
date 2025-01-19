@@ -1,14 +1,19 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
+const multer = require("multer");
 const jwt = require("jsonwebtoken");
 const path = require("path");
-const session = require("express-session");
 const flash = require("connect-flash");
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const mongoose = require("mongoose");
+
 
 // Import models
 const Admin = require('./models/admin');
 const User = require('./models/user');
+const Post = require('./models/post');
 
 // Initialize express
 const app = express();
@@ -20,128 +25,237 @@ app.set("views", path.join(__dirname, "views"));
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(cookieParser());
+app.use(flash());
+
 app.use(
   session({
-    secret: "secretKey",
+    secret: "shhh", 
     resave: false,
     saveUninitialized: true,
   })
 );
-app.use(flash());
+// JWT Secret
+const JWT_SECRET = "shhh"; 
 
-// Set flash messages to locals
 app.use((req, res, next) => {
-  res.locals.successMessage = req.flash("successMessage");
-  res.locals.errorMessage = req.flash("errorMessage");
+  res.locals.successMessage = req.flash("success");
+  res.locals.errorMessage = req.flash("error");
   next();
 });
 
-// Routes
-app.get("/", (req, res) => {
-  res.redirect("/index");
-});
-
-// Render login/register page
-app.get("/login", (req, res) => {
-  res.render("index");
-});
-
-// Handle registration
-app.post("/register", async (req, res) => {
-  const { name, email, password, role, degree, researchPaper } = req.body;
-
-  if ((role === "researcher" || role === "scientist") && (!degree || !researchPaper)) {
-    req.flash("errorMessage", "Degree and research paper are required for this role.");
-    return res.redirect("/login");
-  }
-
+// Middleware to check if user is authenticated
+const authenticateUser = async (req, res, next) => {
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      req.flash("errorMessage", "User already exists! Please log in.");
-      return res.redirect("/login");
+    // Check for JWT token in cookies
+    const token = req.cookies.jwt; // Changed from token to jwt to match what we set
+
+    if (!token) {
+      return res.status(401).redirect("/");
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Verify the token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Find user with the decoded ID
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).redirect("/");
+    }
+
+    // Attach user to request object
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error("Authentication error:", error);
+    res.status(401).redirect("/");
+  }
+};
+
+// Root route
+app.get("/", (req, res) => {
+  res.render("index", { errorMessage: null });
+});
+
+// Registration Route
+app.post("/register", async (req, res) => {
+  try {
+    const { name, email, password, role, degree, researchPaper } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingUser = await User.findOne({
+      email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') }
+    });
+
+    if (existingUser) {
+      return res.render("index", {
+        successMessage: null,
+        errorMessage: "Email already registered! Please log in."
+      });
+    }
+
     const newUser = new User({
       name,
-      email,
-      password: hashedPassword,
+      email: normalizedEmail,
+      password,
       role,
       degree,
-      researchPaper,
+      researchPaper
     });
-    await newUser.save();
-    req.flash("successMessage", "Registration successful! Please log in.");
-    res.redirect("/login");
+
+    const savedUser = await newUser.save();
+
+    const token = jwt.sign(
+      { id: savedUser._id, email: savedUser.email, role: savedUser.role },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.cookie("jwt", token, { httpOnly: true });
+
+    req.session.successMessage = "Registration successful! Welcome to your profile.";
+    return res.redirect(`/profile/${savedUser._id}`);
   } catch (error) {
-    console.error("Error during registration:", error);
-    req.flash("errorMessage", "An error occurred. Please try again.");
-    res.redirect("/login");
+    console.error("Registration error:", error);
+    
+    if (error.code === 11000) {
+      return res.render("index", {
+        successMessage: null,
+        errorMessage: "Email already registered! Please log in."
+      });
+    }
+
+    return res.render("index", {
+      successMessage: null,
+      errorMessage: "An error occurred during registration. Please try again."
+    });
   }
 });
 
-// Handle login
+// Login Route
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    const user = await User.findOne({ email });
-    const admin = await Admin.findOne({ email });
+    const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (!user && !admin) {
-      req.flash("errorMessage", "Invalid email or password!");
-      return res.redirect("/login");
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') }
+    });
+
+    if (!user) {
+      return res.render("index", {
+        successMessage: null,
+        errorMessage: "User not found! Please create an account."
+      });
     }
 
-    const validPassword = await bcrypt.compare(
-      password,
-      user ? user.password : admin.password
-    );
-    if (!validPassword) {
-      req.flash("errorMessage", "Invalid email or password!");
-      return res.redirect("/login");
+    const isMatch = await user.verifyPassword(password);
+    if (!isMatch) {
+      return res.render("index", {
+        successMessage: null,
+        errorMessage: "Incorrect password! Please try again."
+      });
     }
 
     const token = jwt.sign(
-      { id: user ? user._id : admin._id, role: user ? user.role : "admin" },
-      "secretKey"
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "1h" }
     );
-    req.flash("successMessage", "Login successful!");
-    res.redirect(`/profile?token=${token}`);
+
+    res.cookie("jwt", token, { httpOnly: true });
+
+    req.session.successMessage = "Login successful! Welcome back.";
+    return res.redirect(`/profile/${user._id}`);
   } catch (error) {
     console.error("Login error:", error);
-    req.flash("errorMessage", "An error occurred. Please try again.");
-    res.redirect("/login");
+    return res.render("index", {
+      successMessage: null,
+      errorMessage: "An error occurred during login. Please try again."
+    });
   }
 });
 
-// Render profile page
-app.get("/profile", async (req, res) => {
-  const token = req.query.token;
-  if (!token) return res.status(401).send("Access denied");
-
+// Profile Route
+app.get("/profile/:id", authenticateUser, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, "secretKey");
-    const user = await User.findById(decoded.id);
-    res.render("profile", { user });
-  } catch (err) {
-    req.flash("errorMessage", "Invalid token. Please log in again.");
-    res.redirect("/login");
+    // Get the ID from the URL parameters
+    const profileId = req.params.id;
+
+    // Validate the ID format
+    if (!mongoose.Types.ObjectId.isValid(profileId)) {
+      return res.status(400).render("error", {
+        errorMessage: "Invalid user ID format"
+      });
+    }
+
+    // Check if the logged-in user is trying to access their own profile
+    if (profileId !== req.user._id.toString()) {
+      return res.status(403).render("error", {
+        errorMessage: "You can only access your own profile"
+      });
+    }
+
+    // Get success message from session and clear it
+    const successMessage = req.session.successMessage;
+    req.session.successMessage = null;
+
+    return res.render("profile", {
+      user: req.user,
+      successMessage,
+      errorMessage: null
+    });
+  } catch (error) {
+    console.error("Profile error:", error);
+    return res.status(500).render("error", {
+      errorMessage: "An error occurred while loading the profile"
+    });
   }
+});
+
+// Add a route for the pending approval page
+// app.get('/pending-approval', (req, res) => {
+//   res.render('pending-approval', {
+//     message: "Your account is pending approval. You'll be notified once an admin reviews your application."
+//   });
+// });
+
+// Admin approval route
+// app.post("/admin/approve/:id", async (req, res) => {
+//   try {
+//     const userId = req.params.id;
+//     const user = await User.findById(userId);
+
+//     if (!user || user.role === "enthusiast") {
+//       return res.status(400).send("Invalid user or role");
+//     }
+
+//     user.isApproved = true;
+//     await user.save();
+//     res.redirect("/admin/dashboard");
+//   } catch (error) {
+//     console.error("Error approving user:", error);
+//     res.status(500).send("Internal Server Error");
+//   }
+// });
+
+// Logout Route
+app.get("/logout", (req, res) => {
+  res.clearCookie("jwt");
+  req.session.successMessage = "Logged out successfully!";
+  res.redirect("/");
 });
 
 // Error handling middleware
-app.use((req, res) => {
+app.use((req, res, next) => {
   res.status(404).send("Sorry, page not found!");
 });
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Something broke!");
+  res.status(500).send('Something broke!');
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
