@@ -49,10 +49,10 @@ app.use((req, res, next) => {
 const authenticateUser = async (req, res, next) => {
   try {
     // Check for JWT token in cookies
-    const token = req.cookies.jwt; // Changed from token to jwt to match what we set
+    const token = req.cookies.jwt;
 
     if (!token) {
-      return res.status(401).redirect("/");
+      return res.status(401).redirect("/login");
     }
 
     // Verify the token
@@ -61,7 +61,7 @@ const authenticateUser = async (req, res, next) => {
     // Find user with the decoded ID
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(401).redirect("/");
+      return res.status(401).redirect("/login");
     }
 
     // Attach user to request object
@@ -69,9 +69,10 @@ const authenticateUser = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("Authentication error:", error);
-    res.status(401).redirect("/");
+    res.status(401).redirect("/login");
   }
 };
+
 
 // Root route
 app.get("/", (req, res) => {
@@ -211,6 +212,75 @@ app.get("/profile/:id", authenticateUser, async (req, res) => {
     return res.status(500).render("error", {
       errorMessage: "An error occurred while loading the profile"
     });
+  }
+});
+
+app.get("/profile/:id/edit-profile", authenticateUser, async (req, res) => {
+  try {
+    if (req.user._id.toString() !== req.params.id) {
+      return res.status(403).redirect("/profile");
+    }
+    res.render("edit-profile", { user: req.user });
+  } catch (error) {
+    console.error("Error loading edit profile page:", error);
+    res.status(500).send("Server error");
+  }
+});
+// Update user information
+app.post("/update-profile", authenticateUser, async (req, res) => {
+  try {
+    // Get the user ID from the authenticated user
+    const userId = req.user._id;
+
+    const { name, role, password } = req.body;
+
+    // Validate input data
+    if (!name || !role) {
+      req.flash('error', 'Name and role are required');
+      return res.redirect(`/profile/${userId}/edit-profile`);
+    }
+
+    // Validate role values
+    const allowedRoles = ['enthusiast', 'researcher', 'scientist'];
+    if (!allowedRoles.includes(role)) {
+      req.flash('error', 'Invalid role selected');
+      return res.redirect(`/profile/${userId}/edit-profile`);
+    }
+
+    // Prepare update fields
+    const updateFields = {
+      name: name.trim(),
+      role: role.trim()
+    };
+
+    // Only update password if provided
+    if (password && password.trim() !== "") {
+      updateFields.password = await bcrypt.hash(password.trim(), 10);
+    }
+
+    // Update the user using findOneAndUpdate
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { $set: updateFields },
+      { 
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updatedUser) {
+      req.flash('error', 'User not found');
+      return res.redirect('/profile');
+    }
+
+    // Set success message and redirect
+    req.flash('success', 'Profile updated successfully');
+    return res.redirect(`/profile/${userId}`);
+
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    req.flash('error', 'Error updating profile');
+    return res.redirect(`/profile/${req.user._id}/edit-profile`);
   }
 });
 

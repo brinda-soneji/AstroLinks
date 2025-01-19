@@ -77,6 +77,7 @@
 
 <body>
     <div class="container">
+        
         <h1>Welcome, <%= user.name %>!</h1>
 
         <div class="profile-card">
@@ -109,11 +110,10 @@
             </ul>
 
             <div class="actions">
-                <a href="/edit-profile" class="btn">Edit Profile</a>
-                <a href="/logout" class="btn">Logout</a>
+                <a href="/profile/<%= user._id %>/edit-profile" class="btn">Edit Profile</a>
+                <a href="/logout" class="btn bg-red-800">Logout</a>
             </div>
         </div>
     </div>
 </body>
-
 </html>
