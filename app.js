@@ -73,6 +73,98 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
+// Set up multer storage configuration
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/') // Make sure this directory exists
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname))
+  }
+});
+
+// File filter for images
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Not an image! Please upload an image.'), false);
+  }
+};
+
+// Initialize multer with our configuration
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// Create uploads directory if it doesn't exist
+const fs = require('fs');
+const uploadDir = 'public/uploads';
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Add this to your static middleware setup
+app.use('/uploads', express.static('public/uploads'));
+
+// Update your profile update route to handle file uploads
+app.post("/update-profile", authenticateUser, upload.single('profilePicture'), async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { name, role, password } = req.body;
+
+    // Validate input data
+    if (!name || !role) {
+      req.flash('error', 'Name and role are required');
+      return res.redirect(`/profile/${userId}/edit-profile`);
+    }
+
+    // Prepare update fields
+    const updateFields = {
+      name: name.trim(),
+      role: role.trim()
+    };
+
+    // Add profile picture path if a file was uploaded
+    if (req.file) {
+      updateFields.profilePicture = '/uploads/' + req.file.filename;
+    }
+
+    // Only update password if provided
+    if (password && password.trim() !== "") {
+      updateFields.password = await bcrypt.hash(password.trim(), 10);
+    }
+
+    // Update the user using findOneAndUpdate
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { $set: updateFields },
+      { 
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updatedUser) {
+      req.flash('error', 'User not found');
+      return res.redirect('/profile');
+    }
+
+    // Set success message and redirect
+    req.flash('success', 'Profile updated successfully');
+    return res.redirect(`/profile/${userId}`);
+
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    req.flash('error', error.message || 'Error updating profile');
+    return res.redirect(`/profile/${req.user._id}/edit-profile`);
+  }
+});
 
 // Root route
 app.get("/", (req, res) => {
