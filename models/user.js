@@ -3,6 +3,10 @@ const bcrypt = require("bcrypt");
 
 // Define the User schema
 const userSchema = new mongoose.Schema({
+  profilePicture: {
+    type: String,
+    default: 'images/uploads/default-avatar.png' // Default avatar path
+  },
   name: { 
     type: String, 
     required: [true, "Name is required"],
@@ -56,7 +60,9 @@ userSchema.pre("save", async function (next) {
     if (this.isModified("email")) {
       this.email = this.email.toLowerCase();
     }
-    
+    if(this.role === "enthusiast"){
+      this.isApproved = true;
+    }
     next();
   } catch (error) {
     next(error);

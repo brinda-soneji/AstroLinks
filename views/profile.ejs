@@ -72,13 +72,34 @@
         .actions .btn:hover {
             background: #489b4e;
         }
+        .profile-picture {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 20px;
+            display: block;
+            border: 3px solid #5dbb63;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        
+
         <h1>Welcome, <%= user.name %>!</h1>
+        <div class="profile-header">
+            <img 
+                src="<%= user.profilePicture || '/uploads/images/default-avatar.png' %>" 
+                alt="Profile Picture" 
+                class="profile-picture"
+            >
+        </div>
 
         <div class="profile-card">
             <h2>Your Profile</h2>
@@ -116,4 +137,5 @@
         </div>
     </div>
 </body>
+
 </html>
