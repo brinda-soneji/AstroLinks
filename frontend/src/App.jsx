@@ -1,12 +1,19 @@
-import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
 import Home from "../components/Home.jsx";
+import Profile from "../components/Profile.jsx";
 
 const App = () => {
-  return (
-    <div>
-      <Home />
-    </div>
-  )
-}
+  const [user, setUser] = useState(null); // Store user state
 
-export default App
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home setUser={setUser} />} />
+        <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/" />} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
