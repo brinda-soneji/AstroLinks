@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 // Define the User schema
 const userSchema = new mongoose.Schema({
@@ -7,42 +7,68 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'images/uploads/default-avatar.png'
   },
-  name: { 
-    type: String, 
-    required: [true, "Name is required"],
-    trim: true
+  username: {
+    type: String,
+    required: true
   },
   email: {
     type: String,
-    required: [true, "Email is required"],
+    required: true,
     unique: true,
     lowercase: true,
     trim: true,
     match: [/\S+@\S+\.\S+/, "Invalid email format"],
     index: true
   },
-  password: { 
-    type: String, 
-    required: [true, "Password is required"] 
+  password: {
+    type: String,
+    required: true
   },
   role: {
     type: String,
-    required: [true, "Role is required"],
-    enum: ["enthusiast", "researcher", "scientist"],
-    trim: true
+    enum: ['enthusiast', 'researcher', 'scientist'],
+    default: 'enthusiast'
   },
-  degree: { type: String, trim: true },
-  researchPaper: { type: String, trim: true },
-  isApproved: { type: Boolean, default: false },
+  degree: {
+    type: String,
+    required: function() {
+      return this.role === 'researcher' || this.role === 'scientist';
+    }
+  },
+  researchPaper: {
+    type: String,
+    required: function() {
+      return this.role === 'researcher' || this.role === 'scientist';
+    }
+  },
+  researchDescription: {
+    type: String,
+    required: function() {
+      return this.role === 'researcher' || this.role === 'scientist';
+    }
+  },
+  isApproved: {
+    type: Boolean,
+    default: false
+  },
   createdAt: { type: Date, default: Date.now }
+}, {
+  timestamps: true
 });
 
-// Pre-save middleware to hash the password if modified
-userSchema.pre("save", async function (next) {
+// Hash password before saving
+userSchema.pre("save", async function(next) {
   try {
-    if (this.isModified("password")) {
-      this.password = await bcrypt.hash(this.password, 10);
+    // Only hash the password if it's new or modified
+    if (!this.isModified('password')) {
+      return next();
     }
+
+    // Generate salt and hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(this.password, salt);
+    this.password = hashedPassword;
+
     if (this.isModified("email")) {
       this.email = this.email.toLowerCase();
     }
@@ -55,9 +81,15 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// Method to verify password
-userSchema.methods.verifyPassword = async function (password) {
-  return await bcrypt.compare(password, this.password);
+// Method to compare password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  try {
+    // Use bcrypt to compare the candidate password with stored hash
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    return isMatch;
+  } catch (error) {
+    throw error;
+  }
 };
 
 // Static method to find user by email

@@ -1,19 +1,43 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
-import Home from "../components/Home.jsx";
-import Profile from "../components/Profile.jsx";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "../components/Home";
+import Login from "../components/Login";
+import Register from "../components/Register";
+import Profile from "../components/Profile";
+import { useState, useEffect } from "react";
 
-const App = () => {
-  const [user, setUser] = useState(null); // Store user state
+function App() {
+  const [user, setUser] = useState(null);
+
+  // Add effect to check for existing token on app load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (token && savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleSetUser = (userData) => {
+    setUser(userData);
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', userData.token);
+    } else {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    }
+  };
 
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home setUser={setUser} />} />
-        <Route path="/profile" element={user ? <Profile user={user} /> : <Navigate to="/" />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login setUser={handleSetUser} />} />
+        <Route path="/register" element={<Register setUser={handleSetUser} />} />
+        <Route path="/profile" element={<Profile user={user} />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
